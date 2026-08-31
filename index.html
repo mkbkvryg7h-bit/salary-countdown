@@ -13,7 +13,7 @@
   <main>
     <header class="topbar">
       <a class="brand" href="#top" aria-label="薪动时刻首页"><span class="brand-dot"></span>薪动时刻</a>
-      <span class="today" id="today"></span>
+      <div class="top-actions"><span class="today" id="today"></span><button class="theme-button" type="button" id="themeToggle" aria-label="切换页面主题">换个主题</button></div>
     </header>
     <section class="hero" id="top">
       <div class="eyebrow">WORK SMART · COUNT HAPPY</div>
@@ -67,6 +67,18 @@
           <span class="tool-tag">PAID BREAK</span><h3>老板为这次摸鱼付了</h3><div class="tool-value money-value" id="slackPay">¥0.00</div>
           <p>累计摸鱼 <strong id="slackTime">00:00:00</strong></p><div class="button-row"><button type="button" id="slackToggle">开始摸鱼</button><button type="button" class="ghost" id="slackReset">清零</button></div>
         </article>
+        <article class="tool-card buying-card">
+          <span class="tool-tag">BUYING POWER</span><h3>今天的工资可以买</h3><div class="tool-value" id="buyingPower">0.0 杯奶茶</div>
+          <p id="buyingHint">把抽象的工资，换成看得见的小确幸。</p><div class="tool-foot"><span>再赚一个还要</span><strong id="nextItemTime">—</strong></div>
+        </article>
+        <article class="tool-card milestone-card">
+          <span class="tool-tag">MILESTONE</span><h3>下一个赚钱里程碑</h3><div class="tool-value money-value" id="nextMilestone">¥50</div>
+          <div class="milestone-track"><span id="milestoneBar"></span></div><p id="milestoneHint">今天已经完成 0%</p>
+        </article>
+      </div>
+      <div class="share-strip">
+        <div><span class="tool-tag">TODAY REPORT</span><h3>生成你的今日上班战报</h3><p id="sharePreview">今日已赚 ¥0.00，距离下班还有一段时间。</p></div>
+        <div class="button-row"><button type="button" id="shareImage">保存战报图片</button><button type="button" class="ghost" id="copyReport">复制文字</button></div>
       </div>
     </section>
     <section class="settings-section">
@@ -87,6 +99,11 @@
           <label><span>发薪日</span><div class="input-wrap"><input aria-label="发薪日" id="payday" type="number" min="1" max="31" value="10"><i>号</i></div></label>
           <label><span>加班工资倍率</span><select aria-label="加班工资倍率" id="overtimeRate"><option value="0">不开启</option><option value="1">1 倍</option><option value="1.5">1.5 倍</option><option value="2">2 倍</option><option value="3">3 倍</option></select></label>
         </div>
+        <div class="time-fields">
+          <label><span>想换算成什么</span><input aria-label="换算物品名称" id="itemName" type="text" maxlength="12" value="奶茶"></label>
+          <label><span>单价（元）</span><div class="input-wrap"><i>¥</i><input aria-label="换算物品单价" id="itemPrice" type="number" min="0.01" step="1" value="18"></div></label>
+        </div>
+        <label class="wide-field"><span>自定义鼓励语</span><input aria-label="自定义鼓励语" id="customPep" type="text" maxlength="40" placeholder="例如：再坚持一下，晚饭正在向你招手"></label>
         <p class="formula">月薪 ÷ 工作天数 ÷ 有效工时（已扣除午休），收入每秒更新</p>
       </form>
     </section>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="输入月薪和工作时间，实时查看今天赚了多少钱，以及距离下班还有多久。">
+  <meta name="description" content="下班倒计时、实时工资、本月进度、加班和摸鱼收益，一眼看懂自己的时间价值。">
   <meta property="og:title" content="薪动时刻｜下班倒计时与实时工资">
   <meta property="og:description" content="时间在走，工资在涨。">
   <title>薪动时刻｜下班倒计时与实时工资</title>
@@ -11,7 +11,10 @@
 </head>
 <body>
   <main>
-    <header class="topbar"><a class="brand" href="#top" aria-label="薪动时刻首页"><span class="brand-dot"></span>薪动时刻</a><span class="today" id="today"></span></header>
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="薪动时刻首页"><span class="brand-dot"></span>薪动时刻</a>
+      <span class="today" id="today"></span>
+    </header>
     <section class="hero" id="top">
       <div class="eyebrow">WORK SMART · COUNT HAPPY</div>
       <h1>时间在走，<br><em>工资在涨。</em></h1>
@@ -19,25 +22,72 @@
       <div class="dashboard">
         <section class="countdown-card" aria-live="polite">
           <div class="card-label"><span class="pulse"></span><span id="status">距离下班还有</span></div>
-          <div class="countdown" id="countdown"><div><strong id="hours">00</strong><span>小时</span></div><b>:</b><div><strong id="minutes">00</strong><span>分钟</span></div><b>:</b><div><strong id="seconds">00</strong><span>秒</span></div></div>
+          <div class="countdown" id="countdown">
+            <div><strong id="hours">00</strong><span>小时</span></div><b>:</b>
+            <div><strong id="minutes">00</strong><span>分钟</span></div><b>:</b>
+            <div><strong id="seconds">00</strong><span>秒</span></div>
+          </div>
           <div class="done" id="done" hidden>OFF<br>WORK!</div>
-          <div class="progress-head"><span>今日进度</span><strong id="progressText">0.0%</strong></div>
+          <div class="progress-head"><span>今日工作进度</span><strong id="progressText">0.0%</strong></div>
           <div class="progress-track"><span id="progressBar"></span></div>
           <p class="pep-talk" id="pepTalk">再坚持一下，每一秒都有回报。</p>
         </section>
         <section class="earnings-card">
-          <div class="card-label dark">今天已经赚到</div><div class="earned" id="earned">¥0.00</div><div class="ticker" id="perSecond">+ ¥0.00 / 秒</div>
-          <div class="mini-stats"><div><span>每小时</span><strong id="hourPay">¥0.00</strong></div><div><span>今日应得</span><strong id="dayPay">¥0.00</strong></div></div>
+          <div class="card-label dark">今天已经赚到</div>
+          <div class="earned" id="earned">¥0.00</div>
+          <div class="ticker" id="perSecond">+ ¥0.00 / 秒</div>
+          <div class="mini-stats three">
+            <div><span>每小时</span><strong id="hourPay">¥0.00</strong></div>
+            <div><span>今日应得</span><strong id="dayPay">¥0.00</strong></div>
+            <div><span>加班收入</span><strong id="overtimePay">¥0.00</strong></div>
+          </div>
         </section>
       </div>
     </section>
+    <section class="month-section">
+      <div class="section-heading"><span class="section-number">01</span><div><h2>这个月，<br>进账多少了？</h2><p>按你的工作日自动计算本月进度，今天的收入会实时加入。</p></div></div>
+      <div class="month-card">
+        <div class="month-main"><span id="monthName">本月已经赚到</span><strong id="monthEarned">¥0.00</strong></div>
+        <div class="month-progress"><div class="progress-head"><span>本月工资进度</span><strong id="monthProgressText">0.0%</strong></div><div class="progress-track light"><span id="monthProgressBar"></span></div></div>
+        <div class="month-grid">
+          <div><span>已完成工作日</span><strong id="workedDays">0 / 22 天</strong></div>
+          <div><span>距离发薪日</span><strong id="paydayCountdown">—</strong></div>
+          <div><span>预计本月收入</span><strong id="monthForecast">¥0.00</strong></div>
+        </div>
+      </div>
+    </section>
+    <section class="tools-section">
+      <div class="section-heading compact"><span class="section-number">02</span><div><h2>上班也要<br>有点乐趣</h2><p>加班收入自动累计，摸鱼时间也可以明明白白。</p></div></div>
+      <div class="tool-grid">
+        <article class="tool-card overtime-card">
+          <span class="tool-tag">OVERTIME</span><h3>今天加班了多久？</h3><div class="tool-value" id="overtimeTime">00:00:00</div>
+          <p id="overtimeHint">选择加班倍率后，下班时间之后自动开始计算。</p><div class="tool-foot"><span>当前倍率</span><strong id="overtimeRateText">未开启</strong></div>
+        </article>
+        <article class="tool-card slacking-card">
+          <span class="tool-tag">PAID BREAK</span><h3>老板为这次摸鱼付了</h3><div class="tool-value money-value" id="slackPay">¥0.00</div>
+          <p>累计摸鱼 <strong id="slackTime">00:00:00</strong></p><div class="button-row"><button type="button" id="slackToggle">开始摸鱼</button><button type="button" class="ghost" id="slackReset">清零</button></div>
+        </article>
+      </div>
+    </section>
     <section class="settings-section">
-      <div class="settings-copy"><span class="section-number">01</span><div><h2>算算你的<br>时间价值</h2><p>数据只保存在你的设备上，刷新页面也不会丢失。</p></div></div>
+      <div class="settings-copy"><span class="section-number">03</span><div><h2>设置你的<br>工作节奏</h2><p>数据只保存在你的设备上，刷新页面也不会丢失。</p></div></div>
       <form class="settings-card" id="settings">
         <label><span>月薪（元）</span><div class="input-wrap"><i>¥</i><input aria-label="月薪" id="salary" type="number" min="0" step="100" value="15000"></div></label>
         <label><span>每月工作天数</span><div class="input-wrap"><input aria-label="每月工作天数" id="workdays" type="number" min="1" max="31" value="22"><i>天</i></div></label>
-        <div class="time-fields"><label><span>上班时间</span><input aria-label="上班时间" id="start" type="time" value="09:00"></label><label><span>下班时间</span><input aria-label="下班时间" id="end" type="time" value="18:00"></label></div>
-        <p class="formula">按 月薪 ÷ 工作天数 ÷ 每日工时 计算，收入每秒更新</p>
+        <div class="time-fields four">
+          <label><span>上班时间</span><input aria-label="上班时间" id="start" type="time" value="09:00"></label>
+          <label><span>下班时间</span><input aria-label="下班时间" id="end" type="time" value="18:00"></label>
+          <label><span>午休开始</span><input aria-label="午休开始" id="breakStart" type="time" value="12:00"></label>
+          <label><span>午休结束</span><input aria-label="午休结束" id="breakEnd" type="time" value="13:00"></label>
+        </div>
+        <fieldset class="weekday-field"><legend>每周工作日</legend><div class="weekday-options" id="weekdayOptions">
+          <label><input type="checkbox" value="1" checked><span>一</span></label><label><input type="checkbox" value="2" checked><span>二</span></label><label><input type="checkbox" value="3" checked><span>三</span></label><label><input type="checkbox" value="4" checked><span>四</span></label><label><input type="checkbox" value="5" checked><span>五</span></label><label><input type="checkbox" value="6"><span>六</span></label><label><input type="checkbox" value="0"><span>日</span></label>
+        </div></fieldset>
+        <div class="time-fields">
+          <label><span>发薪日</span><div class="input-wrap"><input aria-label="发薪日" id="payday" type="number" min="1" max="31" value="10"><i>号</i></div></label>
+          <label><span>加班工资倍率</span><select aria-label="加班工资倍率" id="overtimeRate"><option value="0">不开启</option><option value="1">1 倍</option><option value="1.5">1.5 倍</option><option value="2">2 倍</option><option value="3">3 倍</option></select></label>
+        </div>
+        <p class="formula">月薪 ÷ 工作天数 ÷ 有效工时（已扣除午休），收入每秒更新</p>
       </form>
     </section>
     <footer><span>愿每一次抬头，离下班都更近一点。</span><b>薪动时刻 © 2026</b></footer>
@@ -45,3 +95,4 @@
   <script src="script.js"></script>
 </body>
 </html>
+

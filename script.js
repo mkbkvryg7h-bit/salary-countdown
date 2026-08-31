@@ -6,6 +6,7 @@ const defaults = {
 const inputIds = ["salary", "workdays", "start", "end", "breakStart", "breakEnd", "payday", "overtimeRate", "itemName", "itemPrice"];
 let settings = { ...defaults };
 let slack = { date: "", accumulatedMs: 0, startedAt: null };
+let overtime = { date: "", accumulatedMs: 0, startedAt: null };
 let latestReport = null;
 const themes = ["default", "gold", "berry", "sky"];
 const themeNames = { default: "牛马绿", gold: "发财金", berry: "周五粉", sky: "摸鱼蓝" };
@@ -22,11 +23,20 @@ function dailyPhrase(date) {
   return dailyPhrases[seed % dailyPhrases.length];
 }
 
-try { settings = { ...defaults, ...JSON.parse(localStorage.getItem("offwork-settings") || "{}") }; } catch {}
-try { slack = { ...slack, ...JSON.parse(localStorage.getItem("offwork-slack") || "{}") }; } catch {}
+function storageGet(key) {
+  try { return localStorage.getItem(key) || sessionStorage.getItem(key); } catch { try { return sessionStorage.getItem(key); } catch { return null; } }
+}
+function storageSet(key, value) {
+  try { localStorage.setItem(key, value); } catch {}
+  try { sessionStorage.setItem(key, value); } catch {}
+}
+try { settings = { ...defaults, ...JSON.parse(storageGet("offwork-settings") || "{}") }; } catch {}
+try { slack = { ...slack, ...JSON.parse(storageGet("offwork-slack") || "{}") }; } catch {}
+try { overtime = { ...overtime, ...JSON.parse(storageGet("offwork-overtime") || "{}") }; } catch {}
 
 const todayKey = date => `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
 if (slack.date !== todayKey(new Date())) slack = { date: todayKey(new Date()), accumulatedMs: 0, startedAt: null };
+if (overtime.date !== todayKey(new Date())) overtime = { date: todayKey(new Date()), accumulatedMs: 0, startedAt: null };
 
 for (const id of inputIds) {
   const input = document.getElementById(id);
@@ -53,6 +63,11 @@ document.getElementById("slackReset").addEventListener("click", () => {
   saveSlack();
   update();
 });
+document.getElementById("overtimeToggle").addEventListener("click", toggleOvertime);
+document.getElementById("overtimeReset").addEventListener("click", () => {
+  overtime = { date: todayKey(new Date()), accumulatedMs: 0, startedAt: null };
+  saveOvertime(); update();
+});
 document.getElementById("themeToggle").addEventListener("click", () => {
   settings.theme = themes[(themes.indexOf(settings.theme) + 1) % themes.length];
   applyTheme(); saveSettings();
@@ -60,8 +75,9 @@ document.getElementById("themeToggle").addEventListener("click", () => {
 document.getElementById("shareImage").addEventListener("click", saveReportImage);
 document.getElementById("copyReport").addEventListener("click", copyReport);
 
-function saveSettings() { localStorage.setItem("offwork-settings", JSON.stringify(settings)); }
-function saveSlack() { localStorage.setItem("offwork-slack", JSON.stringify(slack)); }
+function saveSettings() { storageSet("offwork-settings", JSON.stringify(settings)); }
+function saveSlack() { storageSet("offwork-slack", JSON.stringify(slack)); }
+function saveOvertime() { storageSet("offwork-overtime", JSON.stringify(overtime)); }
 function applyTheme() {
   if (settings.theme === "default") delete document.body.dataset.theme;
   else document.body.dataset.theme = settings.theme;
@@ -117,6 +133,25 @@ function toggleSlack() {
   update();
 }
 
+function toggleOvertime() {
+  const now = new Date();
+  const end = timeToday(settings.end, now);
+  if (now < end || !settings.weekdays.includes(now.getDay())) return;
+  if (settings.overtimeRate <= 0) {
+    settings.overtimeRate = 1.5;
+    document.getElementById("overtimeRate").value = "1.5";
+    saveSettings();
+  }
+  if (overtime.startedAt) {
+    overtime.accumulatedMs += Math.max(0, Date.now() - overtime.startedAt);
+    overtime.startedAt = null;
+  } else {
+    overtime.date = todayKey(now);
+    overtime.startedAt = Date.now();
+  }
+  saveOvertime(); update();
+}
+
 function celebrateMilestone(amount) {
   const key = `offwork-milestone-${todayKey(new Date())}`;
   if (!amount || Number(localStorage.getItem(key) || 0) >= amount) return;
@@ -166,6 +201,7 @@ function saveReportImage() {
 function update() {
   const now = new Date();
   if (slack.date !== todayKey(now)) slack = { date: todayKey(now), accumulatedMs: 0, startedAt: null };
+  if (overtime.date !== todayKey(now)) overtime = { date: todayKey(now), accumulatedMs: 0, startedAt: null };
   const start = timeToday(settings.start, now);
   const end = timeToday(settings.end, now);
   const breakStart = timeToday(settings.breakStart, now);
@@ -181,9 +217,9 @@ function update() {
   const paidElapsedMs = isWorkday ? Math.max(0, rawElapsedMs - elapsedBreakMs) : 0;
   const dayPay = settings.workdays > 0 ? settings.salary / settings.workdays : 0;
   const hourPay = validShift ? dayPay / (paidShiftMs / 3600000) : 0;
-  const overtimeMs = isWorkday && validShift && now > end && settings.overtimeRate > 0 ? now - end : 0;
+  const overtimeMs = isWorkday && validShift ? overtime.accumulatedMs + (overtime.startedAt ? Math.max(0, Date.now() - overtime.startedAt) : 0) : 0;
   const overtimePay = hourPay * settings.overtimeRate * overtimeMs / 3600000;
-  const earnedBase = validShift ? dayPay * Math.min(1, paidElapsedMs / paidShiftMs) : 0;
+  const earnedBase = validShift && isWorkday ? (now >= end ? dayPay : dayPay * Math.min(1, paidElapsedMs / paidShiftMs)) : 0;
   const earned = earnedBase + overtimePay;
   const progress = validShift && isWorkday ? Math.min(100, paidElapsedMs / paidShiftMs * 100) : 0;
   const beforeWork = isWorkday && now < start;
@@ -194,18 +230,18 @@ function update() {
   const resting = !isWorkday;
 
   document.getElementById("today").textContent = now.toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "long" });
-  document.getElementById("status").textContent = resting ? "今天不用上班" : afterWork ? (settings.overtimeRate > 0 ? "下班啦，加班正在计费" : "今天辛苦了，收工！") : beforeWork ? "距离上班还有" : inBreak ? "午休中，距离下班还有" : "距离下班还有";
+  document.getElementById("status").textContent = resting ? "今天不用上班" : afterWork ? (overtime.startedAt ? "加班正在计费" : "今天辛苦了，收工！") : beforeWork ? "距离上班还有" : inBreak ? "午休中，距离下班还有" : "距离下班还有";
   document.getElementById("hours").textContent = pad(totalSeconds / 3600);
   document.getElementById("minutes").textContent = pad(totalSeconds % 3600 / 60);
   document.getElementById("seconds").textContent = pad(totalSeconds % 60);
-  document.getElementById("countdown").hidden = resting || (afterWork && settings.overtimeRate === 0);
-  document.getElementById("done").hidden = !(resting || (afterWork && settings.overtimeRate === 0));
+  document.getElementById("countdown").hidden = resting || afterWork;
+  document.getElementById("done").hidden = !(resting || afterWork);
   document.getElementById("done").innerHTML = resting ? "DAY<br>OFF" : "OFF<br>WORK!";
   document.getElementById("progressText").textContent = progress.toFixed(1) + "%";
   document.getElementById("progressBar").style.width = progress + "%";
   document.getElementById("pepTalk").textContent = `每日一句 · ${dailyPhrase(now)}`;
   document.getElementById("earned").textContent = money(earned);
-  document.getElementById("perSecond").textContent = inBreak || resting ? "当前暂停计薪" : "+ " + money((afterWork && settings.overtimeRate > 0 ? hourPay * settings.overtimeRate : hourPay) / 3600) + " / 秒";
+  document.getElementById("perSecond").textContent = inBreak || resting || (afterWork && !overtime.startedAt) ? "当前暂停计薪" : "+ " + money((afterWork ? hourPay * settings.overtimeRate : hourPay) / 3600) + " / 秒";
   document.getElementById("hourPay").textContent = money(hourPay);
   document.getElementById("dayPay").textContent = money(dayPay);
   document.getElementById("overtimePay").textContent = money(overtimePay);
@@ -224,7 +260,9 @@ function update() {
 
   document.getElementById("overtimeTime").textContent = formatDuration(overtimeMs);
   document.getElementById("overtimeRateText").textContent = settings.overtimeRate > 0 ? `${settings.overtimeRate} 倍` : "未开启";
-  document.getElementById("overtimeHint").textContent = settings.overtimeRate > 0 ? (afterWork ? `正在以 ${money(hourPay * settings.overtimeRate)} / 小时累计` : "下班时间之后会自动开始计算。") : "在下方选择加班倍率，即可开启自动计算。";
+  document.getElementById("overtimeHint").textContent = !afterWork ? "到下班时间后，点击按钮开始计算加班收入。" : overtime.startedAt ? `正在以 ${money(hourPay * settings.overtimeRate)} / 小时累计` : overtimeMs > 0 ? "本次加班已暂停，可以继续或清零。" : "基础日薪已经锁定，点击按钮开始记录加班。";
+  document.getElementById("overtimeToggle").disabled = !afterWork;
+  document.getElementById("overtimeToggle").textContent = !afterWork ? "下班后可开启" : overtime.startedAt ? "结束加班" : overtimeMs > 0 ? "继续加班" : "开始加班";
 
   const slackMs = slack.accumulatedMs + (slack.startedAt ? Math.max(0, Date.now() - slack.startedAt) : 0);
   document.getElementById("slackTime").textContent = formatDuration(slackMs);

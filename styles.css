@@ -18,7 +18,7 @@ main { min-height:100vh; overflow:hidden; }
 .daily-banner span { font:900 10px Arial; letter-spacing:.12em; background:var(--ink); color:white; padding:7px 9px; }
 .daily-banner strong { font-size:16px; line-height:1.5; }
 .daily-banner small { color:#696c62; font-size:10px; font-weight:700; }
-body.privacy-mode #salary { filter:blur(8px); user-select:none; transition:filter .2s ease; }
+body.privacy-mode #salary,body.privacy-mode #monthForecast { filter:blur(8px); user-select:none; transition:filter .2s ease; }
 .hero { max-width:1180px; margin:0 auto; padding:68px 28px 78px; position:relative; }
 .hero::before { content:"¥"; position:absolute; right:-24px; top:-105px; font:900 340px/1 Arial; color:rgba(255,110,157,.09); transform:rotate(10deg); pointer-events:none; }
 .eyebrow { display:inline-block; background:var(--ink); color:var(--cream); border-radius:100px; padding:8px 14px; font:700 11px/1 Arial; letter-spacing:.13em; }

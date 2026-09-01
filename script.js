@@ -1,5 +1,5 @@
 const defaults = {
-  salary: 15000, workdays: 22, start: "09:00", end: "18:00",
+  salary: 0, workdays: 22, start: "09:00", end: "18:00",
   breakStart: "12:00", breakEnd: "13:00", weekdays: [1, 2, 3, 4, 5],
   payday: 10, overtimeRate: 0, itemName: "奶茶", itemPrice: 18, theme: "default"
 };
@@ -27,7 +27,8 @@ function storageSet(key, value) {
   try { sessionStorage.setItem(key, value); } catch {}
 }
 privacyHidden = storageGet("offwork-privacy") === "1";
-try { settings = { ...defaults, ...JSON.parse(storageGet("offwork-settings") || "{}") }; } catch {}
+const savedSettingsRaw = storageGet("offwork-settings");
+try { settings = { ...defaults, ...JSON.parse(savedSettingsRaw || "{}") }; } catch {}
 try { slack = { ...slack, ...JSON.parse(storageGet("offwork-slack") || "{}") }; } catch {}
 try { overtime = { ...overtime, ...JSON.parse(storageGet("offwork-overtime") || "{}") }; } catch {}
 
@@ -37,7 +38,7 @@ if (overtime.date !== todayKey(new Date())) overtime = { date: todayKey(new Date
 
 for (const id of inputIds) {
   const input = document.getElementById(id);
-  input.value = settings[id];
+  input.value = id === "salary" && !savedSettingsRaw ? "" : settings[id];
   input.addEventListener("input", () => {
     settings[id] = ["start", "end", "breakStart", "breakEnd", "itemName"].includes(id) ? input.value : Math.max(0, Number(input.value));
     saveSettings();

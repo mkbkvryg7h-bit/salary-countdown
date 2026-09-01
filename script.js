@@ -8,19 +8,15 @@ let settings = { ...defaults };
 let slack = { date: "", accumulatedMs: 0, startedAt: null };
 let overtime = { date: "", accumulatedMs: 0, startedAt: null };
 let latestReport = null;
+let privacyHidden = false;
 const themes = ["default", "gold", "berry", "sky"];
 const themeNames = { default: "牛马绿", gold: "发财金", berry: "周五粉", sky: "摸鱼蓝" };
-const dailyPhrases = [
-  "今天的努力，正在悄悄变成明天的底气。", "别急着否定自己，你已经比昨天更靠近目标。", "认真生活的人，连时间都会偷偷奖励他。",
-  "每完成一件小事，都是在给未来的自己存钱。", "下班会到，周末会来，好运也正在路上。", "把今天过好，就是对未来最稳的投资。",
-  "允许自己慢一点，但别忘了继续向前。", "你的价值，不只写在工资条上。", "再普通的一天，也值得认真收尾。", "先完成，再完美；先下班，再伟大。",
-  "今天流过的汗，都会变成账户里的数字。", "忙碌不是生活的全部，记得给自己留一点光。", "你正在做的每一件小事，都算数。", "生活不会辜负每一个认真赶路的人。",
-  "把难熬的时刻，换算成看得见的收获。", "累了就歇一会儿，不必一直证明自己。", "今天也在稳定升级，哪怕进度只有一点点。", "工资在涨，经验在长，你也在变得更强。",
-  "保持期待，下一件好事也许正在加载。", "愿你认真工作，也认真享受下班后的生活。", "今天不必满分，完成就已经很棒。", "再坚持一小会儿，自由时间正在靠近。"
-];
+const phraseStarts = ["今天的每一步，","你认真投入的时间，","看似普通的这一天，","此刻积累的每一点，","你完成的每件小事，","那些没有被看见的努力，","今天稳稳前进的你，","愿你忙碌的日子里，","别小看现在的坚持，","正在倒数的时间，","你对生活的认真，","今天做出的每个选择，","哪怕只是前进一点点，","你安静积攒的力量，","这段努力工作的时光，","愿此刻专注的你，","今天克服的小困难，","你踏实走过的路，","此刻账户增长的数字，","每一个认真收尾的今天，"];
+const phraseEnds = ["都在为未来积攒底气。","终会变成属于你的收获。","会在合适的时候给你答案。","都值得被温柔地肯定。","正在把目标一点点拉近。","会让明天的你感谢今天。","也在悄悄拓宽人生的选择。","都会成为更好生活的伏笔。","终将汇成向前的力量。","正在见证你稳定地成长。","都算数，也都有意义。","会替你照亮下一段路。","正在兑换成真实的自由。","值得一个轻松自在的夜晚。","也别忘了给自己一点掌声。","会让好运更容易找到你。","都在证明你比想象中强大。","正带你靠近想要的生活。","都会成为未来的安全感。"];
 function dailyPhrase(date) {
-  const seed = Number(`${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`);
-  return dailyPhrases[seed % dailyPhrases.length];
+  const day = Math.floor((Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(date.getFullYear(), 0, 0)) / 86400000) - 1;
+  const index = (day + date.getFullYear() * 73) % (phraseStarts.length * phraseEnds.length);
+  return phraseStarts[index % phraseStarts.length] + phraseEnds[Math.floor(index / phraseStarts.length) % phraseEnds.length];
 }
 
 function storageGet(key) {
@@ -30,6 +26,7 @@ function storageSet(key, value) {
   try { localStorage.setItem(key, value); } catch {}
   try { sessionStorage.setItem(key, value); } catch {}
 }
+privacyHidden = storageGet("offwork-privacy") === "1";
 try { settings = { ...defaults, ...JSON.parse(storageGet("offwork-settings") || "{}") }; } catch {}
 try { slack = { ...slack, ...JSON.parse(storageGet("offwork-slack") || "{}") }; } catch {}
 try { overtime = { ...overtime, ...JSON.parse(storageGet("offwork-overtime") || "{}") }; } catch {}
@@ -72,6 +69,10 @@ document.getElementById("themeToggle").addEventListener("click", () => {
   settings.theme = themes[(themes.indexOf(settings.theme) + 1) % themes.length];
   applyTheme(); saveSettings();
 });
+document.getElementById("privacyToggle").addEventListener("click", togglePrivacy);
+document.addEventListener("keydown", event => {
+  if (event.altKey && event.key.toLowerCase() === "h") { event.preventDefault(); togglePrivacy(); }
+});
 document.getElementById("shareImage").addEventListener("click", saveReportImage);
 document.getElementById("copyReport").addEventListener("click", copyReport);
 
@@ -82,6 +83,17 @@ function applyTheme() {
   if (settings.theme === "default") delete document.body.dataset.theme;
   else document.body.dataset.theme = settings.theme;
   document.getElementById("themeToggle").textContent = `主题：${themeNames[settings.theme] || themeNames.default}`;
+}
+function applyPrivacy() {
+  document.body.classList.toggle("privacy-mode", privacyHidden);
+  const button = document.getElementById("privacyToggle");
+  button.textContent = privacyHidden ? "显示薪资" : "一键隐藏";
+  button.title = "快捷键：Alt + H";
+}
+function togglePrivacy() {
+  privacyHidden = !privacyHidden;
+  storageSet("offwork-privacy", privacyHidden ? "1" : "0");
+  applyPrivacy(); update();
 }
 const money = value => new Intl.NumberFormat("zh-CN", { style: "currency", currency: "CNY", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number.isFinite(value) ? value : 0);
 const pad = value => String(Math.max(0, Math.floor(value))).padStart(2, "0");
@@ -154,8 +166,8 @@ function toggleOvertime() {
 
 function celebrateMilestone(amount) {
   const key = `offwork-milestone-${todayKey(new Date())}`;
-  if (!amount || Number(localStorage.getItem(key) || 0) >= amount) return;
-  localStorage.setItem(key, String(amount));
+  if (!amount || Number(storageGet(key) || 0) >= amount) return;
+  storageSet(key, String(amount));
   const layer = document.createElement("div");
   layer.className = "celebration";
   layer.innerHTML = `<div class="celebration-card">今日解锁赚钱里程碑<strong>${money(amount)}</strong></div>`;
@@ -165,6 +177,7 @@ function celebrateMilestone(amount) {
 
 function reportText() {
   if (!latestReport) return "";
+  if (privacyHidden) return `【薪动时刻】今天已工作 ${latestReport.progress.toFixed(1)}%，薪资信息已隐藏。距离下班还有 ${duration(latestReport.remainingMs)}。`;
   return `【薪动时刻】今天已工作 ${latestReport.progress.toFixed(1)}%，赚到 ${money(latestReport.earned)}，相当于 ${latestReport.items.toFixed(1)} 个${settings.itemName || "小目标"}。距离下班还有 ${duration(latestReport.remainingMs)}。`;
 }
 
@@ -177,7 +190,22 @@ async function copyReport() {
   const button = document.getElementById("copyReport"); button.textContent = "已复制"; setTimeout(() => button.textContent = "复制文字", 1500);
 }
 
-function saveReportImage() {
+function showReportPreview(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const modal = document.createElement("div"); modal.className = "report-modal";
+  const card = document.createElement("div"); card.className = "report-modal-card";
+  const title = document.createElement("strong"); title.textContent = "战报已生成";
+  const tip = document.createElement("p"); tip.textContent = "如果没有自动下载，可以长按下方图片保存。";
+  const image = document.createElement("img"); image.src = url; image.alt = "今日上班战报";
+  const actions = document.createElement("div"); actions.className = "button-row";
+  const download = document.createElement("a"); download.className = "download-button"; download.download = filename; download.href = url; download.textContent = "下载图片";
+  const close = document.createElement("button"); close.type = "button"; close.className = "ghost"; close.textContent = "关闭";
+  close.addEventListener("click", () => { modal.remove(); setTimeout(() => URL.revokeObjectURL(url), 500); });
+  actions.append(download, close); card.append(title, tip, image, actions); modal.append(card); document.body.append(modal);
+  download.click();
+}
+
+async function saveReportImage() {
   if (!latestReport) return;
   const canvas = document.createElement("canvas"); canvas.width = 1080; canvas.height = 1350;
   const ctx = canvas.getContext("2d");
@@ -187,15 +215,22 @@ function saveReportImage() {
   ctx.fillStyle = "#171913"; ctx.font = "900 52px Microsoft YaHei"; ctx.fillText("薪动时刻 · 今日上班战报", 130, 220);
   ctx.font = "700 28px Microsoft YaHei"; ctx.fillText(new Date().toLocaleDateString("zh-CN", { year:"numeric", month:"long", day:"numeric", weekday:"long" }), 130, 280);
   ctx.font = "800 34px Microsoft YaHei"; ctx.fillText("今天已经赚到", 130, 430);
-  ctx.font = "900 112px Arial"; ctx.fillText(money(latestReport.earned), 130, 565);
+  ctx.font = privacyHidden ? "900 72px Microsoft YaHei" : "900 112px Arial"; ctx.fillText(privacyHidden ? "薪资信息已隐藏" : money(latestReport.earned), 130, 565);
   ctx.fillStyle = "#ff6e9d"; ctx.fillRect(130, 640, Math.max(8, 820 * latestReport.progress / 100), 34);
   ctx.strokeStyle = "#171913"; ctx.lineWidth = 4; ctx.strokeRect(130, 640, 820, 34);
   ctx.fillStyle = "#171913"; ctx.font = "800 32px Microsoft YaHei"; ctx.fillText(`今日工作进度 ${latestReport.progress.toFixed(1)}%`, 130, 740);
-  ctx.fillText(`≈ ${latestReport.items.toFixed(1)} 个${settings.itemName || "小目标"}`, 130, 815);
-  ctx.fillText(`摸鱼收入 ${money(latestReport.slackPay)}`, 130, 890);
+  ctx.fillText(privacyHidden ? "购买力：已隐藏" : `≈ ${latestReport.items.toFixed(1)} 个${settings.itemName || "小目标"}`, 130, 815);
+  ctx.fillText(privacyHidden ? "摸鱼收入：已隐藏" : `摸鱼收入 ${money(latestReport.slackPay)}`, 130, 890);
   ctx.font = "700 28px Microsoft YaHei"; ctx.fillText(dailyPhrase(new Date()), 130, 1060);
   ctx.font = "700 24px Arial"; ctx.fillText("salary-countdown · 数据仅保存在本机", 130, 1180);
-  const link = document.createElement("a"); link.download = `薪动时刻-${todayKey(new Date())}.png`; link.href = canvas.toDataURL("image/png"); link.click();
+  const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+  if (!blob) return;
+  const filename = `薪动时刻-${todayKey(new Date())}.png`;
+  const file = new File([blob], filename, { type: "image/png" });
+  if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ title: "薪动时刻 · 今日上班战报", text: reportText(), files: [file] }); return; } catch {}
+  }
+  showReportPreview(blob, filename);
 }
 
 function update() {
@@ -239,7 +274,8 @@ function update() {
   document.getElementById("done").innerHTML = resting ? "DAY<br>OFF" : "OFF<br>WORK!";
   document.getElementById("progressText").textContent = progress.toFixed(1) + "%";
   document.getElementById("progressBar").style.width = progress + "%";
-  document.getElementById("pepTalk").textContent = `每日一句 · ${dailyPhrase(now)}`;
+  document.getElementById("dailyPhrase").textContent = dailyPhrase(now);
+  document.getElementById("pepTalk").textContent = resting ? "今天是休息日，好好享受自己的时间。" : afterWork ? (overtime.startedAt ? "加班也要记得照顾好自己。" : "下班后的时间，才真正属于你。") : beforeWork ? "先喝杯水，准备开启新的一天。" : inBreak ? "午休时间，先安心吃饭。" : "再坚持一下，每一秒都有回报。";
   document.getElementById("earned").textContent = money(earned);
   document.getElementById("perSecond").textContent = inBreak || resting || (afterWork && !overtime.startedAt) ? "当前暂停计薪" : "+ " + money((afterWork ? hourPay * settings.overtimeRate : hourPay) / 3600) + " / 秒";
   document.getElementById("hourPay").textContent = money(hourPay);
@@ -282,12 +318,13 @@ function update() {
   document.getElementById("nextMilestone").textContent = money(nextMilestone);
   document.getElementById("milestoneBar").style.width = milestoneProgress + "%";
   document.getElementById("milestoneHint").textContent = `距离目标还差 ${money(nextMilestone - earned)}`;
-  celebrateMilestone(previousMilestone);
   latestReport = { earned, progress, items, slackPay: hourPay * slackMs / 3600000, remainingMs: Math.max(0, end - now) };
   document.getElementById("sharePreview").textContent = reportText();
+  celebrateMilestone(previousMilestone);
 }
 
 applyTheme();
+applyPrivacy();
 update();
 setInterval(update, 1000);
 

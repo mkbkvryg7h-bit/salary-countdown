@@ -289,9 +289,9 @@ function update() {
   const items = earned / itemPrice;
   document.getElementById("buyingPower").textContent = `${items.toFixed(1)} 个${settings.itemName || "小目标"}`;
   const itemRemainder = earned % itemPrice === 0 ? itemPrice : itemPrice - earned % itemPrice;
-  document.getElementById("nextItemTime").textContent = hourPay > 0 ? duration(itemRemainder / hourPay * 3600000) : "—";
+  document.getElementById("nextItemTime").textContent = hourPay > 0 ? formatDuration(itemRemainder / hourPay * 3600000) : "—";
   document.getElementById("buyingHint").textContent = `按每个 ${money(itemPrice)} 计算，把抽象的工资换成看得见的收获。`;
-  const timeText = resting ? "今天是休息日" : afterWork ? (overtime.startedAt ? "加班收入正在累计" : "今天已经下班") : beforeWork ? `距离上班还有 ${duration(start - now)}` : `距离下班还有 ${duration(Math.max(0, end - now))}`;
+  const timeText = resting ? "今天是休息日" : afterWork ? (overtime.startedAt ? "加班收入正在累计" : "今天已经下班") : beforeWork ? `距离上班还有 ${formatDuration(start - now)}` : `距离下班还有 ${formatDuration(Math.max(0, end - now))}`;
   latestReport = { earned, progress, items, slackPay: hourPay * slackMs / 3600000, timeText };
   document.getElementById("sharePreview").textContent = `今日已赚 ${money(earned)} · 今日进度 ${progress.toFixed(1)}% · ${timeText}（实时更新）`;
 }

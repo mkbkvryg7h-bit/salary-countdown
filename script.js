@@ -164,21 +164,9 @@ function toggleOvertime() {
   saveOvertime(); update();
 }
 
-function celebrateMilestone(amount) {
-  const key = `offwork-milestone-${todayKey(new Date())}`;
-  if (!amount || Number(storageGet(key) || 0) >= amount) return;
-  storageSet(key, String(amount));
-  const layer = document.createElement("div");
-  layer.className = "celebration";
-  layer.innerHTML = `<div class="celebration-card">今日解锁赚钱里程碑<strong>${money(amount)}</strong></div>`;
-  document.body.appendChild(layer);
-  setTimeout(() => layer.remove(), 3000);
-}
-
 function reportText() {
   if (!latestReport) return "";
-  if (privacyHidden) return `【薪动时刻】今天已工作 ${latestReport.progress.toFixed(1)}%，薪资信息已隐藏。距离下班还有 ${duration(latestReport.remainingMs)}。`;
-  return `【薪动时刻】今天已工作 ${latestReport.progress.toFixed(1)}%，赚到 ${money(latestReport.earned)}，相当于 ${latestReport.items.toFixed(1)} 个${settings.itemName || "小目标"}。距离下班还有 ${duration(latestReport.remainingMs)}。`;
+  return `【薪动时刻】今日已赚 ${money(latestReport.earned)}，工作进度 ${latestReport.progress.toFixed(1)}%，相当于 ${latestReport.items.toFixed(1)} 个${settings.itemName || "小目标"}。${latestReport.timeText}。`;
 }
 
 async function copyReport() {
@@ -190,22 +178,20 @@ async function copyReport() {
   const button = document.getElementById("copyReport"); button.textContent = "已复制"; setTimeout(() => button.textContent = "复制文字", 1500);
 }
 
-function showReportPreview(blob, filename) {
-  const url = URL.createObjectURL(blob);
+function showReportPreview(url, filename) {
   const modal = document.createElement("div"); modal.className = "report-modal";
   const card = document.createElement("div"); card.className = "report-modal-card";
   const title = document.createElement("strong"); title.textContent = "战报已生成";
-  const tip = document.createElement("p"); tip.textContent = "如果没有自动下载，可以长按下方图片保存。";
+  const tip = document.createElement("p"); tip.textContent = "点击下载图片；手机也可以长按下方图片保存。";
   const image = document.createElement("img"); image.src = url; image.alt = "今日上班战报";
   const actions = document.createElement("div"); actions.className = "button-row";
-  const download = document.createElement("a"); download.className = "download-button"; download.download = filename; download.href = url; download.textContent = "下载图片";
+  const download = document.createElement("a"); download.className = "download-button"; download.download = filename; download.href = url; download.target = "_blank"; download.textContent = "下载图片";
   const close = document.createElement("button"); close.type = "button"; close.className = "ghost"; close.textContent = "关闭";
-  close.addEventListener("click", () => { modal.remove(); setTimeout(() => URL.revokeObjectURL(url), 500); });
+  close.addEventListener("click", () => modal.remove());
   actions.append(download, close); card.append(title, tip, image, actions); modal.append(card); document.body.append(modal);
-  download.click();
 }
 
-async function saveReportImage() {
+function saveReportImage() {
   if (!latestReport) return;
   const canvas = document.createElement("canvas"); canvas.width = 1080; canvas.height = 1350;
   const ctx = canvas.getContext("2d");
@@ -215,22 +201,16 @@ async function saveReportImage() {
   ctx.fillStyle = "#171913"; ctx.font = "900 52px Microsoft YaHei"; ctx.fillText("薪动时刻 · 今日上班战报", 130, 220);
   ctx.font = "700 28px Microsoft YaHei"; ctx.fillText(new Date().toLocaleDateString("zh-CN", { year:"numeric", month:"long", day:"numeric", weekday:"long" }), 130, 280);
   ctx.font = "800 34px Microsoft YaHei"; ctx.fillText("今天已经赚到", 130, 430);
-  ctx.font = privacyHidden ? "900 72px Microsoft YaHei" : "900 112px Arial"; ctx.fillText(privacyHidden ? "薪资信息已隐藏" : money(latestReport.earned), 130, 565);
+  ctx.font = "900 112px Arial"; ctx.fillText(money(latestReport.earned), 130, 565);
   ctx.fillStyle = "#ff6e9d"; ctx.fillRect(130, 640, Math.max(8, 820 * latestReport.progress / 100), 34);
   ctx.strokeStyle = "#171913"; ctx.lineWidth = 4; ctx.strokeRect(130, 640, 820, 34);
   ctx.fillStyle = "#171913"; ctx.font = "800 32px Microsoft YaHei"; ctx.fillText(`今日工作进度 ${latestReport.progress.toFixed(1)}%`, 130, 740);
-  ctx.fillText(privacyHidden ? "购买力：已隐藏" : `≈ ${latestReport.items.toFixed(1)} 个${settings.itemName || "小目标"}`, 130, 815);
-  ctx.fillText(privacyHidden ? "摸鱼收入：已隐藏" : `摸鱼收入 ${money(latestReport.slackPay)}`, 130, 890);
+  ctx.fillText(`≈ ${latestReport.items.toFixed(1)} 个${settings.itemName || "小目标"}`, 130, 815);
+  ctx.fillText(`摸鱼收入 ${money(latestReport.slackPay)}`, 130, 890);
   ctx.font = "700 28px Microsoft YaHei"; ctx.fillText(dailyPhrase(new Date()), 130, 1060);
   ctx.font = "700 24px Arial"; ctx.fillText("salary-countdown · 数据仅保存在本机", 130, 1180);
-  const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
-  if (!blob) return;
   const filename = `薪动时刻-${todayKey(new Date())}.png`;
-  const file = new File([blob], filename, { type: "image/png" });
-  if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ title: "薪动时刻 · 今日上班战报", text: reportText(), files: [file] }); return; } catch {}
-  }
-  showReportPreview(blob, filename);
+  showReportPreview(canvas.toDataURL("image/png"), filename);
 }
 
 function update() {
@@ -311,16 +291,9 @@ function update() {
   const itemRemainder = earned % itemPrice === 0 ? itemPrice : itemPrice - earned % itemPrice;
   document.getElementById("nextItemTime").textContent = hourPay > 0 ? duration(itemRemainder / hourPay * 3600000) : "—";
   document.getElementById("buyingHint").textContent = `按每个 ${money(itemPrice)} 计算，把抽象的工资换成看得见的收获。`;
-  const milestones = [50, 100, 200, 500, 1000, 2000, 5000];
-  const nextMilestone = milestones.find(value => value > earned) || Math.ceil(earned / 5000 + 1) * 5000;
-  const previousMilestone = [...milestones].reverse().find(value => value <= earned) || 0;
-  const milestoneProgress = Math.min(100, (earned - previousMilestone) / Math.max(1, nextMilestone - previousMilestone) * 100);
-  document.getElementById("nextMilestone").textContent = money(nextMilestone);
-  document.getElementById("milestoneBar").style.width = milestoneProgress + "%";
-  document.getElementById("milestoneHint").textContent = `距离目标还差 ${money(nextMilestone - earned)}`;
-  latestReport = { earned, progress, items, slackPay: hourPay * slackMs / 3600000, remainingMs: Math.max(0, end - now) };
-  document.getElementById("sharePreview").textContent = reportText();
-  celebrateMilestone(previousMilestone);
+  const timeText = resting ? "今天是休息日" : afterWork ? (overtime.startedAt ? "加班收入正在累计" : "今天已经下班") : beforeWork ? `距离上班还有 ${duration(start - now)}` : `距离下班还有 ${duration(Math.max(0, end - now))}`;
+  latestReport = { earned, progress, items, slackPay: hourPay * slackMs / 3600000, timeText };
+  document.getElementById("sharePreview").textContent = `今日已赚 ${money(earned)} · 今日进度 ${progress.toFixed(1)}% · ${timeText}（实时更新）`;
 }
 
 applyTheme();
